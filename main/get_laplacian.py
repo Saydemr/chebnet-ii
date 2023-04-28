@@ -83,8 +83,7 @@ def get_laplacian(edge_index, edge_weight: Optional[torch.Tensor] = None,
         edge_weight = add_self_loops(edge_index, edge_weight, fill_value=1., num_nodes=num_nodes)
 
         # Compute D_tilde = $ \sum_{j} A_tilde{ij} $
-        for i in range(num_nodes):
-            deg[i][i] = edge_weight[i].sum()
+        deg = scatter_add(edge_weight, row, dim=0, dim_size=num_nodes)
 
         # Compute D_tilde^{-1/2}
         deg_inv_sqrt = deg.pow_(-0.5)
@@ -108,8 +107,7 @@ def get_laplacian(edge_index, edge_weight: Optional[torch.Tensor] = None,
     elif normalization == 'direnrg':
         pass
 
-
-
-
+    else:
+        pass
 
     return edge_index, edge_weight
