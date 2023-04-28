@@ -24,7 +24,7 @@ class ChebnetII_prop(MessagePassing):
                 x_j=math.cos((self.K-j+0.5)*math.pi/(self.K+1))
                 self.temp.data[j] = x_j**2
         
-    def forward(self, x, edge_index,edge_weight=None):
+    def forward(self, x, edge_index, edge_weight=None):
         coe_tmp=F.relu(self.temp)
         coe=coe_tmp.clone()
         
@@ -40,19 +40,24 @@ class ChebnetII_prop(MessagePassing):
         #edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization=None, dtype=x.dtype, num_nodes=x.size(self.node_dim))
 
         #L=I-D^(-0.5)AD^(-0.5) degree normalized laplacian
-        edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='sym', dtype=x.dtype, num_nodes=x.size(self.node_dim))
+        #edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='sym', dtype=x.dtype, num_nodes=x.size(self.node_dim))
 
         # random walk normalized laplacian
         #edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='rw', dtype=x.dtype, num_nodes=x.size(self.node_dim))
 
         # gcn renormalized laplacian
-        #edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='gcn', dtype=x.dtype, num_nodes=x.size(self.node_dim))
+        edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='gcn', dtype=x.dtype, num_nodes=x.size(self.node_dim))
 
-
-        #L_tilde=L-I (scaling, page 3 para 2 of the paper, I think it should be 2L/lmax-I)
+        #L_tilde=L-I, equals to $ D_tilde^(-0.5)* A_tilde * D_tilde^(-0.5) $ 
         edge_index_tilde, norm_tilde= add_self_loops(edge_index1,norm1,fill_value=-1.0,num_nodes=x.size(self.node_dim))
 
-        
+        # scale norm_tilde by theta / theta_1
+        theta = x # is this correct?
+        norm_tilde = norm_tilde * (x/coe[1])
+
+        # add self loops of weight (1 - theta_0 / theta_1)
+        edge_index_tilde, norm_tilde = add_self_loops(edge_index_tilde,norm_tilde,fill_value=1.0-(coe[0]/coe[1]),num_nodes=x.size(self.node_dim))
+
         Tx_0=x
         Tx_1=self.propagate(edge_index_tilde,x=x,norm=norm_tilde,size=None)
 
@@ -63,6 +68,8 @@ class ChebnetII_prop(MessagePassing):
             Tx_2=2*Tx_2-Tx_0
             out=out+coe[i]*Tx_2
             Tx_0,Tx_1 = Tx_1, Tx_2
+        
+        
         return out
 
     def message(self, x_j, norm):

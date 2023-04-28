@@ -79,18 +79,23 @@ def get_laplacian(edge_index, edge_weight: Optional[torch.Tensor] = None,
         edge_weight = tmp
     elif normalization == 'gcn':
 
-        edge_weight = edge_weight + torch.ones(edge_weight.size(0), dtype=dtype)
+        # Compute A_tilde = A + I 
+        edge_weight = add_self_loops(edge_index, edge_weight, fill_value=1., num_nodes=num_nodes)
 
+        # Compute D_tilde = $ \sum_{j} A_tilde{ij} $
         for i in range(num_nodes):
             deg[i][i] = edge_weight[i].sum()
-        
+
+        # Compute D_tilde^{-1/2}
         deg_inv_sqrt = deg.pow_(-0.5)
         deg_inv_sqrt.masked_fill_(deg_inv_sqrt == float('inf'), 0)
+
+        # Compute A_norm = D_tilde^{-1/2} A_tilde D_tilde^{-1/2}
         edge_weight = deg_inv_sqrt[row] * edge_weight * deg_inv_sqrt[col]
 
-        edge_index, tmp = add_self_loops(edge_index, edge_weight,
-                                            fill_value=1., num_nodes=num_nodes)
-        
+        # Compute L = I - A_norm
+        edge_index, tmp = add_self_loops(edge_index, -edge_weight, fill_value=1., num_nodes=num_nodes)
+
         assert tmp is not None
         edge_weight = tmp
     
