@@ -3,7 +3,7 @@ import torch
 from torch.nn import Parameter
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.utils import add_self_loops
-from .get_laplacian import get_laplacian
+from get_laplacian import get_laplacian
 import torch.nn.functional as F
 from utils import cheby
 
@@ -43,12 +43,13 @@ class ChebnetII_prop(MessagePassing):
         # # For later reuse:
         # # unnormalized laplacian (graph laplacian)
         # #edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization=None, dtype=x.dtype, num_nodes=x.size(self.node_dim))
+        # random walk normalized laplacian
+        #edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='rw', dtype=x.dtype, num_nodes=x.size(self.node_dim))
 
-        # #L=I-D^(-0.5)AD^(-0.5) degree normalized laplacian
-        # #edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='sym', dtype=x.dtype, num_nodes=x.size(self.node_dim))
 
-        # # random walk normalized laplacian
-        # #edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='rw', dtype=x.dtype, num_nodes=x.size(self.node_dim))
+        #L=I-D^(-0.5)AD^(-0.5) degree normalized laplacian
+        # edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='sym', dtype=x.dtype, num_nodes=x.size(self.node_dim))
+        # edge_index_tilde, norm_tilde= add_self_loops(edge_index1,norm1,fill_value=-1.0,num_nodes=x.size(self.node_dim))
 
         # gcn renormalized laplacian
         edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='gcn', dtype=x.dtype, num_nodes=x.size(self.node_dim))
@@ -57,11 +58,10 @@ class ChebnetII_prop(MessagePassing):
         edge_index_tilde, norm_tilde= add_self_loops(edge_index1,norm1,fill_value=-1.0,num_nodes=x.size(self.node_dim))
 
         # scale norm_tilde by theta / theta_1
-
-        norm_tilde = norm_tilde * (theta/theta_0)
+        norm_tilde = norm_tilde * (self.theta/self.theta1)
 
         # add self loops of weight (1 - theta_0 / theta_1)
-        edge_index_tilde, norm_tilde = add_self_loops(edge_index_tilde,norm_tilde,fill_value=1.0-(theta_0/theta_1),num_nodes=x.size(self.node_dim))
+        edge_index_tilde, norm_tilde = add_self_loops(edge_index_tilde,norm_tilde,fill_value=1.0-(self.theta0/self.theta1),num_nodes=x.size(self.node_dim))
 
         Tx_0=x
         Tx_1=self.propagate(edge_index_tilde,x=x,norm=norm_tilde,size=None)

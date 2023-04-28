@@ -5,7 +5,7 @@ from torch_scatter import scatter_add
 
 from torch_geometric.utils import add_self_loops, remove_self_loops
 
-from .num_nodes import maybe_num_nodes
+from num_nodes import maybe_num_nodes
 
 
 def get_laplacian(edge_index, edge_weight: Optional[torch.Tensor] = None,
@@ -38,13 +38,12 @@ def get_laplacian(edge_index, edge_weight: Optional[torch.Tensor] = None,
     """
 
     if normalization is not None:
-        assert normalization in ['sym', 'rw']  # 'Invalid normalization'
+        assert normalization in ['sym', 'rw', 'gcn']  # 'Invalid normalization'
 
     edge_index, edge_weight = remove_self_loops(edge_index, edge_weight)
 
     if edge_weight is None:
-        edge_weight = torch.ones(edge_index.size(1), dtype=dtype,
-                                 device=edge_index.device)
+        edge_weight = torch.ones(edge_index.size(1), dtype=dtype, device=edge_index.device)
 
     num_nodes = maybe_num_nodes(edge_index, num_nodes)
 
@@ -80,8 +79,11 @@ def get_laplacian(edge_index, edge_weight: Optional[torch.Tensor] = None,
     elif normalization == 'gcn':
 
         # Compute A_tilde = A + I 
-        edge_weight = add_self_loops(edge_index, edge_weight, fill_value=1., num_nodes=num_nodes)
-
+        edge_index, tmp = add_self_loops(edge_index, edge_weight, fill_value=1., num_nodes=num_nodes)
+        
+        assert tmp is not None
+        edge_weight = tmp
+        row, col = edge_index[0], edge_index[1]
         # Compute D_tilde = $ \sum_{j} A_tilde{ij} $
         deg = scatter_add(edge_weight, row, dim=0, dim_size=num_nodes)
 
