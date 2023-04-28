@@ -52,11 +52,13 @@ class ChebnetII_prop(MessagePassing):
         edge_index_tilde, norm_tilde= add_self_loops(edge_index1,norm1,fill_value=-1.0,num_nodes=x.size(self.node_dim))
 
         # scale norm_tilde by theta / theta_1
-        theta = x # is this correct?
-        norm_tilde = norm_tilde * (x/coe[1])
+        theta = 1 # is this correct?
+        theta_0 = 0
+        theta_1 = -1
+        norm_tilde = norm_tilde * (theta/theta_0)
 
         # add self loops of weight (1 - theta_0 / theta_1)
-        edge_index_tilde, norm_tilde = add_self_loops(edge_index_tilde,norm_tilde,fill_value=1.0-(coe[0]/coe[1]),num_nodes=x.size(self.node_dim))
+        edge_index_tilde, norm_tilde = add_self_loops(edge_index_tilde,norm_tilde,fill_value=1.0-(theta_0/theta_1),num_nodes=x.size(self.node_dim))
 
         Tx_0=x
         Tx_1=self.propagate(edge_index_tilde,x=x,norm=norm_tilde,size=None)
