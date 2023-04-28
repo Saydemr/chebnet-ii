@@ -2,7 +2,8 @@ import math
 import torch
 from torch.nn import Parameter
 from torch_geometric.nn.conv import MessagePassing
-from torch_geometric.utils import add_self_loops, get_laplacian
+from torch_geometric.utils import add_self_loops
+from .get_laplacian import get_laplacian
 import torch.nn.functional as F
 from utils import cheby
 
@@ -12,6 +13,9 @@ class ChebnetII_prop(MessagePassing):
         super(ChebnetII_prop, self).__init__(aggr='add', **kwargs)
         
         self.K = K
+        self.theta = kwargs.get('theta', 1.0)
+        self.theta0 = kwargs.get('theta0', 0.0)
+        self.theta1 = kwargs.get('theta1', -1.0)
         self.temp = Parameter(torch.Tensor(self.K+1))
         self.Init=Init
         self.reset_parameters()
@@ -36,14 +40,15 @@ class ChebnetII_prop(MessagePassing):
             coe[i]=2*coe[i]/(self.K+1)
 
 
-        # unnormalized laplacian (graph laplacian)
-        #edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization=None, dtype=x.dtype, num_nodes=x.size(self.node_dim))
+        # # For later reuse:
+        # # unnormalized laplacian (graph laplacian)
+        # #edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization=None, dtype=x.dtype, num_nodes=x.size(self.node_dim))
 
-        #L=I-D^(-0.5)AD^(-0.5) degree normalized laplacian
-        #edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='sym', dtype=x.dtype, num_nodes=x.size(self.node_dim))
+        # #L=I-D^(-0.5)AD^(-0.5) degree normalized laplacian
+        # #edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='sym', dtype=x.dtype, num_nodes=x.size(self.node_dim))
 
-        # random walk normalized laplacian
-        #edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='rw', dtype=x.dtype, num_nodes=x.size(self.node_dim))
+        # # random walk normalized laplacian
+        # #edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='rw', dtype=x.dtype, num_nodes=x.size(self.node_dim))
 
         # gcn renormalized laplacian
         edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='gcn', dtype=x.dtype, num_nodes=x.size(self.node_dim))
@@ -52,9 +57,7 @@ class ChebnetII_prop(MessagePassing):
         edge_index_tilde, norm_tilde= add_self_loops(edge_index1,norm1,fill_value=-1.0,num_nodes=x.size(self.node_dim))
 
         # scale norm_tilde by theta / theta_1
-        theta = 1 # is this correct?
-        theta_0 = 0
-        theta_1 = -1
+
         norm_tilde = norm_tilde * (theta/theta_0)
 
         # add self loops of weight (1 - theta_0 / theta_1)
