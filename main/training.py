@@ -126,10 +126,9 @@ if __name__ == '__main__':
     parser.add_argument('--semi_rnd', type=bool, default=False, help='semi-supervised with random splits')
     parser.add_argument('--semi_fix', type=bool, default=False, help='semi-supervised with fixed splits')
 
-    parser.add_argument('--theta', type=float, default=1.0)
-    parser.add_argument('--theta0', type=float, default=0)
-    parser.add_argument('--theta1', type=float, default=-1.0)
-
+    parser.add_argument('--xi0', type=float, default=0)
+    parser.add_argument('--xi1', type=float, default=1.0)
+    
     args = parser.parse_args()
     set_seed(args.seed)
     #10 fixed seeds for random splits from BernNet

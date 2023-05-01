@@ -11,11 +11,9 @@ from utils import cheby
 class ChebnetII_prop(MessagePassing):
     def __init__(self, K, Init=False, bias=True, **kwargs):
         super(ChebnetII_prop, self).__init__(aggr='add', **kwargs)
-        
         self.K = K
-        self.theta = kwargs.get('theta', 1.0)
-        self.theta0 = kwargs.get('theta0', 0.0)
-        self.theta1 = kwargs.get('theta1', -1.0)
+        self.xi0 = kwargs.get('xi0', 0.0)
+        self.xi1 = kwargs.get('xi1', -1.0)
         self.temp = Parameter(torch.Tensor(self.K+1))
         self.Init=Init
         self.reset_parameters()
@@ -54,14 +52,14 @@ class ChebnetII_prop(MessagePassing):
         # gcn renormalized laplacian
         edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='gcn', dtype=x.dtype, num_nodes=x.size(self.node_dim))
 
-        #L_tilde=L-I, equals to $ D_tilde^(-0.5)* A_tilde * D_tilde^(-0.5) $ 
+        #L_tilde=L-I, equals to $ -D_tilde^(-0.5)* A_tilde * D_tilde^(-0.5) $ 
         edge_index_tilde, norm_tilde= add_self_loops(edge_index1,norm1,fill_value=-1.0,num_nodes=x.size(self.node_dim))
 
         # scale norm_tilde by theta / theta_1
-        norm_tilde = norm_tilde * (self.theta/self.theta1)
+        norm_tilde = norm_tilde * (self.xi1)
 
         # add self loops of weight (1 - theta_0 / theta_1)
-        edge_index_tilde, norm_tilde = add_self_loops(edge_index_tilde,norm_tilde,fill_value=1.0-(self.theta0/self.theta1),num_nodes=x.size(self.node_dim))
+        edge_index_tilde, norm_tilde = add_self_loops(edge_index_tilde,norm_tilde,fill_value=1.0-(self.xi0),num_nodes=x.size(self.node_dim))
 
         Tx_0=x
         Tx_1=self.propagate(edge_index_tilde,x=x,norm=norm_tilde,size=None)
