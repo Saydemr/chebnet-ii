@@ -129,7 +129,7 @@ if __name__ == '__main__':
     parser.add_argument('--semi_fix', type=bool, default=False, help='semi-supervised with fixed splits')
 
     parser.add_argument('--xi0', type=float, default=1.0)
-    parser.add_argument('--xi1', type=float, default=1.0)
+    parser.add_argument('--xi1', type=float, default=-1.0)
     parser.add_argument('--laplacian', type=str, choices=['sym','rw','gcn','none'], default='gcn')
     
     args = parser.parse_args()

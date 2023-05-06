@@ -41,14 +41,14 @@ class ChebnetII_prop(MessagePassing):
 
         edge_index1, norm1 = get_laplacian(edge_index, edge_weight, normalization=self.laplacian, dtype=x.dtype, num_nodes=x.size(self.node_dim), kwargs=self.kwargs)
         
-        adj = torch.sparse_coo_tensor(edge_index1, norm1, (x.size(self.node_dim), x.size(self.node_dim)))
-        max_eigenvalue = torch.lobpcg(adj, k=1)[0]
-        norm1 = 2 / max_eigenvalue * norm1  # Then the eigenvalue is always in the range [0, 2]
+        # adj = torch.sparse_coo_tensor(edge_index1, norm1, (x.size(self.node_dim), x.size(self.node_dim)))
+        # max_eigenvalue = torch.lobpcg(adj, k=1)[0]
+        # norm1 = 2 / max_eigenvalue * norm1  # Then the eigenvalue is always in the range [0, 2]
 
         # L_tilde= 2/lambda_max * L - I
         edge_index_tilde, norm_tilde = add_self_loops(edge_index1, norm1, fill_value=-1.0, num_nodes=x.size(self.node_dim))
         
-        edge_index_tilde, norm_tilde = coalesce(edge_index_tilde, norm_tilde, x.size(self.node_dim), x.size(self.node_dim))
+        # edge_index_tilde, norm_tilde = coalesce(edge_index_tilde, norm_tilde, x.size(self.node_dim), x.size(self.node_dim))
         
         Tx_0=x
         Tx_1=self.propagate(edge_index_tilde,x=x,norm=norm_tilde,size=None)

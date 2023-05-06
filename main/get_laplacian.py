@@ -38,7 +38,7 @@ def get_laplacian(edge_index, edge_weight: Optional[torch.Tensor] = None,
             :obj:`max_val + 1` of :attr:`edge_index`. (default: :obj:`None`)
     """
     xi0 = kwargs.get('xi0', 1.0)
-    xi1 = kwargs.get('xi1', 1.0)
+    xi1 = kwargs.get('xi1', -1.0)
 
     if normalization is not None:
         assert normalization in ['sym', 'rw', 'gcn']  # 'Invalid normalization'
