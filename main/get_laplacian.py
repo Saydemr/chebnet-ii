@@ -37,8 +37,8 @@ def get_laplacian(edge_index, edge_weight: Optional[torch.Tensor] = None,
         num_nodes (int, optional): The number of nodes, *i.e.*
             :obj:`max_val + 1` of :attr:`edge_index`. (default: :obj:`None`)
     """
-    xi0 = kwargs.get('xi0', 0.0)
-    xi1 = kwargs.get('xi1', -1.0)
+    xi0 = kwargs.get('xi0', 1.0)
+    xi1 = kwargs.get('xi1', 1.0)
 
     if normalization is not None:
         assert normalization in ['sym', 'rw', 'gcn']  # 'Invalid normalization'
@@ -81,13 +81,11 @@ def get_laplacian(edge_index, edge_weight: Optional[torch.Tensor] = None,
         edge_weight = tmp
     elif normalization == 'gcn':
 
-        # Compute A_tilde = A + I 
         edge_index, tmp = add_self_loops(edge_index, edge_weight, fill_value=1., num_nodes=num_nodes)
         
         assert tmp is not None
         edge_weight = tmp
         row, col = edge_index[0], edge_index[1]
-        
         # Compute D_tilde = $ \sum_{j} A_tilde{ij} $
         deg = scatter_add(edge_weight, row, dim=0, dim_size=num_nodes)
 
@@ -97,14 +95,14 @@ def get_laplacian(edge_index, edge_weight: Optional[torch.Tensor] = None,
 
         # Compute A_norm = D_tilde^{-1/2} A_tilde D_tilde^{-1/2}
         edge_weight = deg_inv_sqrt[row] * edge_weight * deg_inv_sqrt[col]
+        edge_weight = edge_weight * xi1
 
-        # Compute A_norm = - xi1 * A_norm
-        edge_weight = -xi1 * edge_weight
-
-        # Compute xi0 * I + A_norm
+        # Compute L = I + A_norm
         edge_index, tmp = add_self_loops(edge_index, edge_weight, fill_value=xi0, num_nodes=num_nodes)
+
         assert tmp is not None
         edge_weight = tmp
+
 
     elif normalization == 'p':
         pass
