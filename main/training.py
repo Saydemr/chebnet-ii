@@ -13,6 +13,8 @@ from dataset_loader import DataLoader
 from utils import random_splits,random_splits_citation,fixed_splits, set_seed
 from torch_geometric.utils import to_scipy_sparse_matrix
 from torch_geometric.nn.conv.gcn_conv import gcn_norm
+import warnings
+warnings.filterwarnings("ignore")
 
 def train(model, optimizer, data, dprate):
     model.train()

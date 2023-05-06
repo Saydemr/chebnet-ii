@@ -6,6 +6,7 @@ from torch_geometric.utils import add_self_loops
 from get_laplacian import get_laplacian
 import torch.nn.functional as F
 from utils import cheby
+from torch_sparse import coalesce
 
 
 class ChebnetII_prop(MessagePassing):
@@ -14,6 +15,7 @@ class ChebnetII_prop(MessagePassing):
         self.K = K
         self.xi0 = kwargs.get('xi0', 0.0)
         self.xi1 = kwargs.get('xi1', -1.0)
+        self.laplacian = kwargs.get('laplacian', 'gcn')
         self.temp = Parameter(torch.Tensor(self.K+1))
         self.Init=Init
         self.reset_parameters()
@@ -38,29 +40,18 @@ class ChebnetII_prop(MessagePassing):
             coe[i]=2*coe[i]/(self.K+1)
 
 
-        # # For later reuse:
-        # # unnormalized laplacian (graph laplacian)
-        # #edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization=None, dtype=x.dtype, num_nodes=x.size(self.node_dim))
-        # random walk normalized laplacian
-        #edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='rw', dtype=x.dtype, num_nodes=x.size(self.node_dim))
-
-
-        #L=I-D^(-0.5)AD^(-0.5) degree normalized laplacian
-        # edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='sym', dtype=x.dtype, num_nodes=x.size(self.node_dim))
-        # edge_index_tilde, norm_tilde= add_self_loops(edge_index1,norm1,fill_value=-1.0,num_nodes=x.size(self.node_dim))
-
         # gcn renormalized laplacian
         edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='gcn', dtype=x.dtype, num_nodes=x.size(self.node_dim))
 
-        #L_tilde=L-I, equals to $ -D_tilde^(-0.5)* A_tilde * D_tilde^(-0.5) $ 
-        edge_index_tilde, norm_tilde= add_self_loops(edge_index1,norm1,fill_value=-1.0,num_nodes=x.size(self.node_dim))
+        adj = torch.sparse_coo_tensor(edge_index1, norm1, (x.size(self.node_dim), x.size(self.node_dim)))
+        max_eigenvalue = torch.lobpcg(adj, k=1)[0]
+        norm1 = 2 / max_eigenvalue * norm1  # Then the eigenvalue is always in the range [0, 2]
 
-        # scale norm_tilde by theta / theta_1
-        norm_tilde = norm_tilde * (self.xi1)
-
-        # add self loops of weight (1 - theta_0 / theta_1)
-        edge_index_tilde, norm_tilde = add_self_loops(edge_index_tilde,norm_tilde,fill_value=1.0-(self.xi0),num_nodes=x.size(self.node_dim))
-
+        # L_tilde= 2/lambda_max * L - I
+        edge_index_tilde, norm_tilde = add_self_loops(edge_index1, norm1, fill_value=-1.0, num_nodes=x.size(self.node_dim))
+        
+        edge_index_tilde, norm_tilde = coalesce(edge_index_tilde, norm_tilde, x.size(self.node_dim), x.size(self.node_dim))
+        
         Tx_0=x
         Tx_1=self.propagate(edge_index_tilde,x=x,norm=norm_tilde,size=None)
 
