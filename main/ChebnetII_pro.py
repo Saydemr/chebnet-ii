@@ -13,8 +13,7 @@ class ChebnetII_prop(MessagePassing):
     def __init__(self, K, Init=False, bias=True, **kwargs):
         super(ChebnetII_prop, self).__init__(aggr='add', **kwargs)
         self.K = K
-        self.xi0 = kwargs.get('xi0', 0.0)
-        self.xi1 = kwargs.get('xi1', -1.0)
+        self.kwargs = kwargs
         self.laplacian = kwargs.get('laplacian', 'gcn')
         self.temp = Parameter(torch.Tensor(self.K+1))
         self.Init=Init
@@ -40,9 +39,8 @@ class ChebnetII_prop(MessagePassing):
             coe[i]=2*coe[i]/(self.K+1)
 
 
-        # gcn renormalized laplacian
-        edge_index1, norm1 = get_laplacian(edge_index, edge_weight,normalization='gcn', dtype=x.dtype, num_nodes=x.size(self.node_dim))
-
+        edge_index1, norm1 = get_laplacian(edge_index, edge_weight, normalization=self.laplacian, dtype=x.dtype, num_nodes=x.size(self.node_dim), kwargs=self.kwargs)
+        
         adj = torch.sparse_coo_tensor(edge_index1, norm1, (x.size(self.node_dim), x.size(self.node_dim)))
         max_eigenvalue = torch.lobpcg(adj, k=1)[0]
         norm1 = 2 / max_eigenvalue * norm1  # Then the eigenvalue is always in the range [0, 2]
