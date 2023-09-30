@@ -1,6 +1,6 @@
 ## Convolutional Neural Networks on Graphs with Chebyshev Approximation, Revisited
 
-This repository contains a PyTorch implementation of our NeruIPS2022 paper "Convolutional Neural Networks on Graphs with Chebyshev Approximation, Revisited."
+This repository contains a PyTorch implementation of the NeruIPS2022 paper "Convolutional Neural Networks on Graphs with Chebyshev Approximation, Revisited."
 
 
 ## Environment Settings    
